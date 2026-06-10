@@ -34,6 +34,12 @@ Boltz1:
      python ipsae.py <path_to_boltz1_pae_npz_file> <path_to_boltz1_cif_file> <pae_cutoff> <dist_cutoff>
      python ipsae.py pae_AURKA_TPX2_model_0.npz  AURKA_TPX2_model_0.cif 10 10
 
+Esmfold2:
+
+    python ipsae.py <path_to_Esmfold2_pae_npy_file> <path_to_Esmfold2_cif_file> <pae_cutoff> <dist_cutoff>
+    python ipsae.py model_0.npy model_0.cif 10 10
+
+
 # Output chain-chain score file
 
 AlphaFold2 complex of RAF1 (chain A), KSR1 (chain B), and MEK1 (chain C). RAF1 and KSR1 kinase domains make pseudosymmetric dimer, similar to BRAF homodimer. In this model, MEK1 kinase domain interacts directly with RAF1 kinase domain (AF3 places MEK1 on KSR1; both complexes exist in PDB).
