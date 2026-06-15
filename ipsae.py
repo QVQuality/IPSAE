@@ -77,6 +77,7 @@ if ".pdb" in pdb_path and pae_file_path.endswith(".json"):
     af2 = True
     af3 = False
     boltz = False
+    esmfold = False
     cif = False
 
 elif ".cif" in pdb_path and pae_file_path.endswith(".json"):
@@ -85,6 +86,7 @@ elif ".cif" in pdb_path and pae_file_path.endswith(".json"):
     af2 = False
     af3 = True
     boltz = False
+    esmfold = False
     cif = True
 
 elif ".cif" in pdb_path and pae_file_path.endswith(".npz"):  # Boltz1/2 in cif format
@@ -93,6 +95,7 @@ elif ".cif" in pdb_path and pae_file_path.endswith(".npz"):  # Boltz1/2 in cif f
     af2 = False
     af3 = False
     boltz = True
+    esmfold = False
     cif = True
 
 elif ".pdb" in pdb_path and pae_file_path.endswith(".npz"):  # Boltz1/2 in pdb format
@@ -101,7 +104,17 @@ elif ".pdb" in pdb_path and pae_file_path.endswith(".npz"):  # Boltz1/2 in pdb f
     af2 = False
     af3 = False
     boltz = True
+    esmfold = False
     cif = False
+
+elif ".cif" in pdb_path and pae_file_path.endswith(".npy"):  # Esmfold2
+    pdb_stem = pdb_path.replace(".cif", "")
+    path_stem = f'{pdb_path.replace(".cif", "")}_{pae_string}_{dist_string}'
+    af2 = False
+    af3 = False
+    boltz = False
+    esmfold = True
+    cif = True
 
 else:
     print("Wrong PDB or PAE file type ", pdb_path)
@@ -633,6 +646,32 @@ if af3:
     else:
         print("AF3 summary file does not exist: ", summary_file_path)
 
+if esmfold:
+    if os.path.exists(pae_file_path):
+        pae_matrix = np.load(pae_file_path)
+    else:
+        print("ESMFOLD PAE file does not exist: ", pae_file_path)
+        sys.exit()
+    # Get iptm matrix from esmfold summary confidence file
+    iptm_esmfold = {chain1: {chain2: 0 for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+
+    summary_file_path = pdb_path.replace(".cif", ".json")
+    if summary_file_path is not None and os.path.exists(summary_file_path):
+        with open(summary_file_path, 'r') as file:
+            data_summary = json.load(file)
+        plddt = np.array(data_summary["plddt"])
+        cb_plddt = np.array(data_summary["plddt"]) # residue-level, cb=ca
+        
+        if plddt.shape[0] != pae_matrix.shape[0]:
+            raise Exception(f"length of plddt vector ({plddt.shape[0]}) != from shape of pae matrix ({pae_matrix.shape[0]})")
+        esmfold_chain_pair_iptm_data = data_summary['pair_chains_iptm']
+        for nchain1, chain1 in enumerate(unique_chains):
+            for nchain2, chain2 in enumerate(unique_chains):
+                if chain1 == chain2:
+                    continue
+                iptm_esmfold[chain1][chain2] = esmfold_chain_pair_iptm_data[nchain1][nchain2]
+    else:
+        print("ESMFOLD summary file does not exist: ", summary_file_path)
 
 # Compute chain-pair-specific interchain PTM and PAE, count valid pairs, and count unique residues
 # First, create dictionaries of appropriate size: top keys are chain1 and chain2 where chain1 != chain2
@@ -1018,6 +1057,8 @@ for pair in sorted(chainpairs):
             iptm_af = iptm_af3[chain1][chain2]  # symmetric value for each chain pair
         if boltz:
             iptm_af = iptm_boltz[chain1][chain2]
+        if esmfold:
+            iptm_af = iptm_esmfold[chain1][chain2]
 
         outstring = f'{chain1}    {chain2}     {pae_string:3}  {dist_string:3}  {"asym":5} ' + (
             f'{ipsae_d0res_asym[chain1][chain2]:8.6f}    '
